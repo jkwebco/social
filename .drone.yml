@@ -79,12 +79,61 @@ pipeline:
         TESTS: eslint
   vue-build:
     image: nextcloudci/jsunit:jsunit-5
+    group: build
     commands:
       - npm install
       - npm run build
     when:
       matrix:
         TESTS: vue-build
+
+  frontend-build:
+    image: nextcloudci/jsunit:jsunit-5
+    group: build
+    commands:
+    - npm install
+    - npm run build
+    when:
+      matrix:
+        TESTS: frontend
+  frontend-server:
+    image: nextcloudci/acceptance-php7.1:acceptance-php7.1-2
+    group: test
+    detach: true
+    environment:
+    - APP_NAME=social
+    - CORE_BRANCH=master
+    - DB=sqlite
+    commands:
+    # Pre-setup steps
+    - cd /drone/src
+    - git clone --depth 1 -b master https://github.com/nextcloud/server ../server
+    - ln -s /drone/src /drone/server/apps/social
+    - cd ../server
+    - git submodule update --init
+    - ls -la ./apps
+    - wget https://raw.githubusercontent.com/nextcloud/travis_ci/master/core_install.sh && bash core_install.sh sqlite
+    - php occ app:enable social
+    - php occ config:system:set trusted_domains 2 --value=frontend-server
+    - php -S 0.0.0.0:80 &
+    when:
+      matrix:
+        TESTS: frontend
+  frontend-test:
+    image: cypress/browsers:chrome69
+    group: test
+    environment:
+    - APP_NAME=social
+    - CORE_BRANCH=master
+    - DB=sqlite
+    commands:
+    - npm install
+    - bash -c "until curl -s http://frontend-server > /dev/null > /dev/null; do sleep 2; done"
+    - $(npm bin)/cypress run --record --key $CYPRESS_RECORD_TOKEN
+    secrets: [ cypress_record_token ]
+    when:
+      matrix:
+        TESTS: frontend
 
 matrix:
   include:
@@ -94,6 +143,7 @@ matrix:
     - TESTS: syntax-php7.2
     - TESTS: syntax-php7.3
     - TESTS: eslint
+    - TESTS: frontend
     - TESTS: vue-build
 
 
