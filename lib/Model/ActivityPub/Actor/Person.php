@@ -31,8 +31,8 @@ declare(strict_types=1);
 namespace OCA\Social\Model\ActivityPub\Actor;
 
 
+use DateTime;
 use JsonSerializable;
-use OCA\Social\Exceptions\InvalidResourceEntryException;
 use OCA\Social\Exceptions\UrlCloudException;
 use OCA\Social\Model\ActivityPub\ACore;
 use OCA\Social\Model\ActivityPub\Object\Image;
@@ -475,7 +475,14 @@ class Person extends ACore implements JsonSerializable {
 	 */
 	public function importFromDatabase(array $data) {
 		parent::importFromDatabase($data);
-		$this->setPreferredUsername($this->validate(self::AS_USERNAME, 'preferred_username', $data, ''))
+
+		$dTime = new DateTime($this->get('creation', $data, 'yesterday'));
+		//$dTime->format(SignatureService::DATE_FORMAT);
+		$this->setCreation($dTime->getTimestamp());
+
+		$this->setPreferredUsername(
+			$this->validate(self::AS_USERNAME, 'preferred_username', $data, '')
+		)
 			 ->setName($this->validate(self::AS_USERNAME, 'name', $data, ''))
 			 ->setAccount($this->validate(self::AS_ACCOUNT, 'account', $data, ''))
 			 ->setPublicKey($this->get('public_key', $data, ''))
@@ -486,8 +493,7 @@ class Person extends ACore implements JsonSerializable {
 			 ->setFollowing($this->validate(self::AS_URL, 'following', $data, ''))
 			 ->setSharedInbox($this->validate(self::AS_URL, 'shared_inbox', $data, ''))
 			 ->setFeatured($this->validate(self::AS_URL, 'featured', $data, ''))
-			 ->setDetails($this->getArray('details', $data, []))
-			 ->setCreation($this->getInt('creation', $data, 0));
+			 ->setDetails($this->getArray('details', $data, []));
 	}
 
 

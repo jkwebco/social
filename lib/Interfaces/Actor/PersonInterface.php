@@ -33,6 +33,8 @@ namespace OCA\Social\Interfaces\Actor;
 
 use daita\MySmallPhpTools\Traits\TArrayTools;
 use OCA\Social\Db\CacheActorsRequest;
+use OCA\Social\Exceptions\CacheActorDoesNotExistException;
+use OCA\Social\Exceptions\InvalidOriginException;
 use OCA\Social\Exceptions\ItemNotFoundException;
 use OCA\Social\Interfaces\IActivityPubInterface;
 use OCA\Social\Model\ActivityPub\ACore;
@@ -123,11 +125,25 @@ class PersonInterface implements IActivityPubInterface {
 	/**
 	 * @param ACore $activity
 	 * @param ACore $item
+	 *
+	 * @throws InvalidOriginException
 	 */
 	public function activity(Acore $activity, ACore $item) {
 		/** @var Person $item */
+
 		if ($activity->getType() === Update::TYPE) {
-			// TODO - check time and update.
+			$activity->checkOrigin($item->getId());
+			$item->setCreation($activity->getOriginCreationTime());
+
+			try {
+				$current = $this->cacheActorsRequest->getFromId($item->getId());
+				if ($current->getCreation() < $activity->getOriginCreationTime()) {
+					$this->cacheActorsRequest->update($item);
+				}
+			} catch (CacheActorDoesNotExistException $e) {
+				$this->cacheActorsRequest->save($item);
+			}
+
 		}
 	}
 

@@ -163,11 +163,12 @@ class ActivityPubController extends Controller {
 			$body = file_get_contents('php://input');
 			$this->miscService->log('[<<] shared-inbox: ' . $body, 1);
 
-			$origin = $this->signatureService->checkRequest($this->request);
+			$requestTime = 0;
+			$origin = $this->signatureService->checkRequest($this->request, $requestTime);
 
 			$activity = $this->importService->importFromJson($body);
 			if (!$this->signatureService->checkObject($activity)) {
-				$activity->setOrigin($origin, SignatureService::ORIGIN_HEADER);
+				$activity->setOrigin($origin, SignatureService::ORIGIN_HEADER, $requestTime);
 			}
 
 			try {
@@ -201,14 +202,15 @@ class ActivityPubController extends Controller {
 			$body = file_get_contents('php://input');
 			$this->miscService->log('[<<] inbox: ' . $body, 1);
 
-			$origin = $this->signatureService->checkRequest($this->request);
+			$requestTime = 0;
+			$origin = $this->signatureService->checkRequest($this->request, $requestTime);
 
 			// TODO - check the recipient <-> username
 //			$actor = $this->actorService->getActor($username);
 
 			$activity = $this->importService->importFromJson($body);
 			if (!$this->signatureService->checkObject($activity)) {
-				$activity->setOrigin($origin, SignatureService::ORIGIN_HEADER);
+				$activity->setOrigin($origin, SignatureService::ORIGIN_HEADER, $requestTime);
 			}
 
 			try {
